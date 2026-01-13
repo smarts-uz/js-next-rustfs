@@ -25,7 +25,7 @@ export default async function Home() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-200 dark:border-gray-700">
           <Upload />
         </div>
-
+        
         <div className="mt-4 mx-auto">
           <UppyUploader />
         </div>

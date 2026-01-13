@@ -34,21 +34,24 @@ type FormErrors = {
 export default function Upload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadingRustFS, setUploadingRustFS] = useState(false); // New loading state for RustFS
   const [errors, setErrors] = useState<FormErrors>({});
   const [success, setSuccess] = useState<string | null>(null);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
 
-  async function upload(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  // Standard upload function (MinIO)
+  async function uploadStandard() {
+    if (!selectedFile) {
+      setErrors({ file: ["Please select a file first"] });
+      return;
+    }
+
     setErrors({});
     setSuccess(null);
     setUploadedUrl(null);
 
-    const formData = new FormData(e.currentTarget);
-    const file = formData.get("file") as File;
-
     // Validate file with Zod
-    const validation = fileSchema.safeParse({ file });
+    const validation = fileSchema.safeParse({ file: selectedFile });
 
     if (!validation.success) {
       const formattedErrors: FormErrors = {};
@@ -65,6 +68,9 @@ export default function Upload() {
 
     try {
       setUploading(true);
+      
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
       const response = await fetch("/api/upload", {
         method: "POST",
@@ -78,7 +84,7 @@ export default function Upload() {
         return;
       }
 
-      setSuccess(`File "${data.fileName}" uploaded successfully!`);
+      setSuccess(`File "${data.fileName}" uploaded successfully to MinIO!`);
       setUploadedUrl(data.url);
       setSelectedFile(null);
     } catch (error) {
@@ -86,6 +92,62 @@ export default function Upload() {
       console.error("Upload error:", error);
     } finally {
       setUploading(false);
+    }
+  }
+
+  // RustFS upload function
+  async function uploadToRustFS() {
+    if (!selectedFile) {
+      setErrors({ file: ["Please select a file first"] });
+      return;
+    }
+
+    setErrors({});
+    setSuccess(null);
+    setUploadedUrl(null);
+
+    // Validate file with Zod
+    const validation = fileSchema.safeParse({ file: selectedFile });
+
+    if (!validation.success) {
+      const formattedErrors: FormErrors = {};
+      validation.error.issues.forEach((err) => {
+        const path = err.path[0] as string;
+        if (!formattedErrors[path]) {
+          formattedErrors[path] = [];
+        }
+        formattedErrors[path]!.push(err.message);
+      });
+      setErrors(formattedErrors);
+      return;
+    }
+
+    try {
+      setUploadingRustFS(true);
+      
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const response = await fetch("/api/upload-rustfs", {
+        method: "POST",
+        body: formData,
+      });
+
+      const { data } = await response.json();
+
+      if (!response.ok) {
+        setErrors({ file: [data.error || "Upload failed"] });
+        return;
+      }
+
+      setSuccess(`File "${data.fileName}" uploaded successfully to RustFS!`);
+      setUploadedUrl(data.url);
+      setSelectedFile(null);
+    } catch (error) {
+      setErrors({ file: ["An error occurred during upload"] });
+      console.error("Upload error:", error);
+    } finally {
+      setUploadingRustFS(false);
     }
   }
 
@@ -98,7 +160,7 @@ export default function Upload() {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <form onSubmit={upload} className="space-y-6">
+      <div className="space-y-6">
         {/* File Upload Area */}
         <div className="space-y-2">
           <label
@@ -113,7 +175,7 @@ export default function Upload() {
               type="file"
               name="file"
               onChange={handleFileChange}
-              disabled={uploading}
+              disabled={uploading || uploadingRustFS}
               className="block w-full text-sm text-gray-900 dark:text-gray-100
                 file:mr-4 file:py-3 file:px-6
                 file:rounded-lg file:border-0
@@ -190,62 +252,124 @@ export default function Upload() {
           )}
         </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={uploading || !selectedFile}
-          className="w-full py-3 px-6 text-sm font-semibold rounded-lg
-            bg-linear-to-r from-blue-500 to-purple-600
-            hover:from-blue-600 hover:to-purple-700
-            text-white shadow-lg hover:shadow-xl
-            transition-all duration-200
-            disabled:opacity-50 disabled:cursor-not-allowed
-            disabled:hover:shadow-lg
-            flex items-center justify-center gap-2"
-        >
-          {uploading ? (
-            <>
-              <svg
-                className="animate-spin h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
+        {/* Upload Buttons */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Standard Upload Button */}
+          <button
+            type="button"
+            onClick={uploadStandard}
+            disabled={uploading || uploadingRustFS || !selectedFile}
+            className="py-3 px-6 text-sm font-semibold rounded-lg
+              bg-linear-to-r from-blue-500 to-purple-600
+              hover:from-blue-600 hover:to-purple-700
+              text-white shadow-lg hover:shadow-xl
+              transition-all duration-200
+              disabled:opacity-50 disabled:cursor-not-allowed
+              disabled:hover:shadow-lg
+              flex items-center justify-center gap-2"
+          >
+            {uploading ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Uploading to MinIO...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
                   stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Uploading...
-            </>
-          ) : (
-            <>
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-              Upload File
-            </>
-          )}
-        </button>
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                Upload to MinIO
+              </>
+            )}
+          </button>
+
+          {/* RustFS Upload Button */}
+          <button
+            type="button"
+            onClick={uploadToRustFS}
+            disabled={uploading || uploadingRustFS || !selectedFile}
+            className="py-3 px-6 text-sm font-semibold rounded-lg
+              bg-linear-to-r from-green-500 to-teal-600
+              hover:from-green-600 hover:to-teal-700
+              text-white shadow-lg hover:shadow-xl
+              transition-all duration-200
+              disabled:opacity-50 disabled:cursor-not-allowed
+              disabled:hover:shadow-lg
+              flex items-center justify-center gap-2"
+          >
+            {uploadingRustFS ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Uploading to RustFS...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                Upload to RustFS
+              </>
+            )}
+          </button>
+        </div>
 
         {/* Success Message */}
         {success && (
@@ -278,7 +402,8 @@ export default function Upload() {
             </div>
           </div>
         )}
-      </form>
+      </div>
+      
     </div>
   );
 }

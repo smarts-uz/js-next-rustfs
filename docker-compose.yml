@@ -11,6 +11,26 @@ services:
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
-
+  rustfs-server:
+    image: rustfs/rustfs:latest
+    container_name: rustfs-server
+    ports:
+      - "9100:9000"   # RustFS S3 API port
+      - "9002:9001"   # RustFS console (if enabled)
+    volumes:
+      - ./data:/data
+    environment:
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
+      - RUSTFS_CONSOLE_ENABLE=true
+      # - RUSTFS_SERVER_DOMAINS=example.com   # Optional
+      # - RUSTFS_TLS_PATH=/certs              # If using TLS
+    command: [
+      "--access-key", "rustfsadmin",
+      "--secret-key", "rustfsadmin",
+      "--console-enable",
+      "/data"
+    ]
+    restart: unless-stopped
 volumes:
   minio_data:

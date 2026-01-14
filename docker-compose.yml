@@ -32,5 +32,14 @@ services:
       "/data"
     ]
     restart: unless-stopped
+  
+  upload:
+    image: mukhtarovich/upload-rustfs:1.0.0
+    container_name: upload
+    ports:
+      - "3000:3000"
+    depends_on:
+      - rustfs-server
+      - minio
 volumes:
   minio_data:

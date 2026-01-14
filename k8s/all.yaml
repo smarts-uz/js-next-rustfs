@@ -1,0 +1,250 @@
+# =======================
+# Namespace
+# =======================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: storage
+---
+# =======================
+# MinIO PVC
+# =======================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local-path
+---
+# =======================
+# RustFS PVC
+# =======================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rustfs-pvc
+  namespace: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local-path
+---
+# =======================
+# MinIO Deployment
+# =======================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args:
+            - server
+            - /data
+            - --console-address
+            - ":9001"
+          env:
+            - name: MINIO_ROOT_USER
+              value: minioadmin
+            - name: MINIO_ROOT_PASSWORD
+              value: minioadmin123
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          volumeMounts:
+            - name: minio-data
+              mountPath: /data
+      volumes:
+        - name: minio-data
+          persistentVolumeClaim:
+            claimName: minio-pvc
+---
+# =======================
+# MinIO Service
+# =======================
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: storage
+spec:
+  type: NodePort
+  selector:
+    app: minio
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: 9000
+      nodePort: 30090
+    - name: console
+      port: 9001
+      targetPort: 9001
+      nodePort: 30091
+---
+# =======================
+# RustFS Deployment
+# =======================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rustfs
+  namespace: storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rustfs
+  template:
+    metadata:
+      labels:
+        app: rustfs
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:latest
+          args:
+            - "--access-key"
+            - "rustfsadmin"
+            - "--secret-key"
+            - "rustfsadmin"
+            - "--console-enable"
+            - "/data"
+          env:
+            - name: RUSTFS_ACCESS_KEY
+              value: rustfsadmin
+            - name: RUSTFS_SECRET_KEY
+              value: rustfsadmin
+            - name: RUSTFS_CONSOLE_ENABLE
+              value: "true"
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          volumeMounts:
+            - name: rustfs-data
+              mountPath: /data
+      volumes:
+        - name: rustfs-data
+          persistentVolumeClaim:
+            claimName: rustfs-pvc
+---
+# =======================
+# RustFS Service
+# =======================
+apiVersion: v1
+kind: Service
+metadata:
+  name: rustfs
+  namespace: storage
+spec:
+  type: NodePort
+  selector:
+    app: rustfs
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: 9000
+      nodePort: 30100
+    - name: console
+      port: 9001
+      targetPort: 9001
+      nodePort: 30101
+---
+# =======================
+# Upload Deployment (DEV)
+# =======================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upload
+  namespace: storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: upload
+  template:
+    metadata:
+      labels:
+        app: upload
+    spec:
+      containers:
+        - name: upload
+          image: mukhtarovich/upload-rustfs:1.0.0
+          ports:
+            - containerPort: 3000
+          env:
+            # ===== MINIO =====
+            - name: MINIO_ENDPOINT
+              value: minio
+            - name: MINIO_PORT
+              value: "9000"
+            - name: MINIO_ACCESS_KEY
+              value: minioadmin
+            - name: MINIO_SECRET_KEY
+              value: minioadmin123
+            - name: MINIO_BUCKET
+              value: uploads
+            - name: MINIO_PRIVATE_BUCKET
+              value: private
+            - name: MINIO_USE_SSL
+              value: "false"
+            - name: MINIO_URL
+              value: http://minio:9000
+
+            # ===== DATABASE =====
+            - name: DATABASE_URL
+              value: postgresql://neondb_owner:npg_kuhUNl6RjA7K@ep-hidden-star-ahjdsr9x-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+            # ===== RUSTFS =====
+            - name: RUSTFS_ENDPOINT
+              value: http://rustfs:9000
+            - name: RUSTFS_ACCESS_KEY
+              value: rustfsadmin
+            - name: RUSTFS_SECRET_KEY
+              value: rustfsadmin
+            - name: RUSTFS_BUCKET
+              value: uploads
+            - name: RUSTFS_PRIVATE_BUCKET
+              value: private
+            - name: RUSTFS_PUBLIC_URL
+              value: http://rustfs:9000
+---
+# =======================
+# Upload Service
+# =======================
+apiVersion: v1
+kind: Service
+metadata:
+  name: upload
+  namespace: storage
+spec:
+  type: NodePort
+  selector:
+    app: upload
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30300

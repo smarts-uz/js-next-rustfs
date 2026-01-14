@@ -41,5 +41,27 @@ services:
     depends_on:
       - rustfs-server
       - minio
+    environment:
+      # ===== MINIO =====
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: uploads
+      MINIO_PRIVATE_BUCKET: private
+      MINIO_USE_SSL: "false"
+      MINIO_URL: http://192.168.3.140:9001
+
+      # ===== DATABASE =====
+      DATABASE_URL: postgresql://neondb_owner:npg_kuhUNl6RjA7K@ep-hidden-star-ahjdsr9x-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+      # ===== RUSTFS =====
+      RUSTFS_ENDPOINT: http://192.168.3.140:30100/
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_BUCKET: uploads
+      RUSTFS_PRIVATE_BUCKET: private
+      RUSTFS_PUBLIC_URL: http://192.168.3.140:30100/
+
 volumes:
   minio_data:

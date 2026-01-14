@@ -28,11 +28,12 @@ const UppyUploaderComponent = () => {
       },
     })
       .use(AwsS3, {
-        endpoint: "/api/upload-presigned",
+        endpoint: "/api/upload-presigned-rustfs",
         getUploadParameters: async (file) => {
-          const { data } = await axios.post("/api/upload-presigned", {
+          const { data } = await axios.post("/api/upload-presigned-rustfs", {
             fileName: file.name,
             originalName: file.name,
+            contentType: file.type,
             size: file.size,
             isPrivate,
           });
@@ -52,7 +53,7 @@ const UppyUploaderComponent = () => {
       .on("upload-success", async (file) => {
         if (file) {
           try {
-            await axios.put("/api/upload-presigned", {
+            await axios.put("/api/upload-presigned-rustfs", {
               fileId: file.meta.fileId,
               contentType: file.type,
             });
@@ -67,16 +68,19 @@ const UppyUploaderComponent = () => {
 
   return (
     <div className="space-y-4">
+      
       {/* Privacy Toggle */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
             <p>
-              Minio Upload
+              RustFS Upload
             </p>
         <div className="flex items-center justify-between">
+          
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
               Privacy Setting
             </h3>
+          
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {isPrivate
                 ? "Your image will be private and require authentication to view"
@@ -130,7 +134,7 @@ const UppyUploaderComponent = () => {
   );
 };
 
-const UppyUploader = dynamic(() => Promise.resolve(UppyUploaderComponent), {
+const UppyUploaderRustfs = dynamic(() => Promise.resolve(UppyUploaderComponent), {
   ssr: false,
   loading: () => (
     <p className="h-137 w-187 border border-white rounded flex justify-center items-center bg-black/40 animate-pulse">
@@ -139,4 +143,4 @@ const UppyUploader = dynamic(() => Promise.resolve(UppyUploaderComponent), {
   ),
 });
 
-export default UppyUploader;
+export default UppyUploaderRustfs;

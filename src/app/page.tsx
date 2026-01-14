@@ -2,6 +2,7 @@ import Upload from "@/components/upload-file";
 import FilesGrid from "@/components/files-grid";
 import prisma from "@/lib/prisma";
 import UppyUploader from "@/components/uppy-upload";
+import UppyUploaderRustfs from "@/components/uppy-upload-rustfs";
 
 export default async function Home() {
   const files = await prisma.file.findMany({
@@ -15,7 +16,7 @@ export default async function Home() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-            MinIO File Upload
+            MinIO & RustFS File Upload
           </h1>
           <p className="text-gray-600 dark:text-gray-300 text-lg">
             Securely upload your files with validation and progress tracking
@@ -26,8 +27,9 @@ export default async function Home() {
           <Upload />
         </div>
         
-        <div className="mt-4 mx-auto">
+        <div className="mt-4 mx-auto flex  gap-4">
           <UppyUploader />
+          <UppyUploaderRustfs />
         </div>
 
         <div className="mt-4">

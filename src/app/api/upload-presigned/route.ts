@@ -20,7 +20,8 @@ export async function POST(req: Request) {
     const bucketName = isPrivate 
       ? process.env.MINIO_PRIVATE_BUCKET! 
       : process.env.MINIO_BUCKET!;
-
+    console.log("Bucket Name:", bucketName);
+    
     const objectName = `${Date.now()}-${fileName}`;
     const url = `${process.env.MINIO_URL}/${bucketName}/${objectName}`;
 

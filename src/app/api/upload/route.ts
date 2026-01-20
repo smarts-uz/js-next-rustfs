@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { minioClient } from "@/lib/minio";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { rustfsClient } from "@/lib/rustfs";
 import prisma from "@/lib/prisma";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -47,16 +48,16 @@ export async function POST(req: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const fileName = `${Date.now()}-${file.name}`;
-    const url = `${process.env.MINIO_URL}/${process.env.MINIO_BUCKET}/${fileName}`;
+    const url = `${process.env.RUSTFS_PUBLIC_URL}/${process.env.RUSTFS_BUCKET}/${fileName}`;
 
-    await minioClient.putObject(
-      process.env.MINIO_BUCKET!,
-      fileName,
-      buffer,
-      buffer.length,
-      {
-        "Content-Type": file.type,
-      }
+    await rustfsClient.send(
+      new PutObjectCommand({
+        Bucket: process.env.RUSTFS_BUCKET!,
+        Key: fileName,
+        Body: buffer,
+        ContentType: file.type,
+        ContentLength: file.size,
+      })
     );
 
     const row = await prisma.file.create({
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
         fileName,
         url,
         size: file.size,
-        bucket: process.env.MINIO_BUCKET!,
+        bucket: process.env.RUSTFS_BUCKET!,
         originalName: file.name,
       },
     });

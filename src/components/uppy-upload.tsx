@@ -70,7 +70,7 @@ const UppyUploaderComponent = () => {
       {/* Privacy Toggle */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
             <p>
-              Minio Upload
+              RustFS Upload
             </p>
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -125,7 +125,7 @@ const UppyUploaderComponent = () => {
       </div>
 
       {/* Uppy Dashboard */}
-      <Dashboard theme="dark" uppy={uppy} width={450} />
+      <Dashboard theme="dark" uppy={uppy} />
     </div>
   );
 };

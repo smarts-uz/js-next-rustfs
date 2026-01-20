@@ -1,16 +1,4 @@
 services:
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    ports:
-      - "9000:9000" # S3 API
-      - "9001:9001" # Admin Console
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
   rustfs-server:
     image: rustfs/rustfs:latest
     container_name: rustfs-server
@@ -40,18 +28,7 @@ services:
       - "3000:3000"
     depends_on:
       - rustfs-server
-      - minio
     environment:
-      # ===== MINIO =====
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin123
-      MINIO_BUCKET: uploads
-      MINIO_PRIVATE_BUCKET: private
-      MINIO_USE_SSL: "false"
-      MINIO_URL: http://192.168.3.140:9001
-
       # ===== DATABASE =====
       DATABASE_URL: postgresql://neondb_owner:npg_kuhUNl6RjA7K@ep-hidden-star-ahjdsr9x-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 
@@ -64,4 +41,4 @@ services:
       RUSTFS_PUBLIC_URL: http://192.168.3.140:30100/
 
 volumes:
-  minio_data:
+  rustfs_data:

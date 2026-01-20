@@ -17,6 +17,18 @@ const nextConfig: NextConfig = {
         port: "30100",
         pathname: "/**", // ✅ REQUIRED
       },
+      {
+        protocol: "http",
+        hostname: "192.168.3.155",
+        port: "30090",
+        pathname: "/**", // ✅ REQUIRED
+      },
+      {
+        protocol: "http",
+        hostname: "192.168.3.155",
+        port: "30100",
+        pathname: "/**", // ✅ REQUIRED
+      },
     ],
     dangerouslyAllowLocalIP: true,
   },

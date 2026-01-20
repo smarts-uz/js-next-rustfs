@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { FileStatus, FileExposure } from "@/generated/prisma/enums";
-import { minioClient } from "@/lib/minio";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { rustfsClient } from "@/lib/rustfs";
 import prisma from "@/lib/prisma";
 import z from "zod";
 
@@ -18,19 +20,23 @@ export async function POST(req: Request) {
     
     // Select bucket based on privacy setting
     const bucketName = isPrivate 
-      ? process.env.MINIO_PRIVATE_BUCKET! 
-      : process.env.MINIO_BUCKET!;
+      ? process.env.RUSTFS_PRIVATE_BUCKET! 
+      : process.env.RUSTFS_BUCKET!;
     console.log("Bucket Name:", bucketName);
     
     const objectName = `${Date.now()}-${fileName}`;
-    const url = `${process.env.MINIO_URL}/${bucketName}/${objectName}`;
+    const url = `${process.env.RUSTFS_PUBLIC_URL}/${bucketName}/${objectName}`;
 
     // Generate presigned PUT URL (15 minutes expiry)
-    const presignedUrl = await minioClient.presignedPutObject(
-      bucketName,
-      objectName,
-      15 * 60 // 15 minutes
-    );
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: objectName,
+      ContentLength: size,
+    });
+
+    const presignedUrl = await getSignedUrl(rustfsClient, command, {
+      expiresIn: 15 * 60 // 15 minutes
+    });
 
     // Create pending record
     const row = await prisma.file.create({

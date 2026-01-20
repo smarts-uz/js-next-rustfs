@@ -112,7 +112,7 @@ spec:
     spec:
       containers:
         - name: upload
-          image: mukhtarovich/upload-rustfs:1.1.0
+          image: mukhtarovich/upload-rustfs:2.0.0
           ports:
             - containerPort: 3000
           env:

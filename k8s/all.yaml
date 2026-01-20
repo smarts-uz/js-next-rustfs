@@ -198,9 +198,9 @@ spec:
           env:
             # ===== MINIO =====
             - name: MINIO_ENDPOINT
-              value: minio
+              value: "http://192.168.3.151"
             - name: MINIO_PORT
-              value: "9000"
+              value: "30090"
             - name: MINIO_ACCESS_KEY
               value: minioadmin
             - name: MINIO_SECRET_KEY
@@ -212,7 +212,7 @@ spec:
             - name: MINIO_USE_SSL
               value: "false"
             - name: MINIO_URL
-              value: http://minio:9000
+              value: http://192.168.3.151:30090
 
             # ===== DATABASE =====
             - name: DATABASE_URL
@@ -220,7 +220,7 @@ spec:
 
             # ===== RUSTFS =====
             - name: RUSTFS_ENDPOINT
-              value: http://rustfs:9000
+              value: http://192.168.3.151:30100
             - name: RUSTFS_ACCESS_KEY
               value: rustfsadmin
             - name: RUSTFS_SECRET_KEY
@@ -230,7 +230,7 @@ spec:
             - name: RUSTFS_PRIVATE_BUCKET
               value: private
             - name: RUSTFS_PUBLIC_URL
-              value: http://rustfs:9000
+              value: http://192.168.3.151:30100
 ---
 # =======================
 # Upload Service
